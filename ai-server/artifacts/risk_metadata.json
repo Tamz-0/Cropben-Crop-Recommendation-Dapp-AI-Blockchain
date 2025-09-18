@@ -1,0 +1,47 @@
+{
+    "metadata": {
+        "version": "v2025-01-15",
+        "hash": "ef2ba69460a930e3",
+        "accuracy": 0.859005,
+        "features": [
+            "landSize",
+            "toolsOwned",
+            "insuranceStatus",
+            "farmerRating",
+            "cropType_encoded",
+            "farmingMethod_encoded",
+            "location_encoded"
+        ],
+        "trained_on": "2025-09-10T15:41:26.256078"
+    },
+    "feature_importance": [
+        [
+            "farmerRating",
+            0.5674390999842495
+        ],
+        [
+            "insuranceStatus",
+            0.18091567769932385
+        ],
+        [
+            "landSize",
+            0.13168920039050966
+        ],
+        [
+            "farmingMethod_encoded",
+            0.1199323284379341
+        ],
+        [
+            "location_encoded",
+            1.6047319351038324e-05
+        ],
+        [
+            "toolsOwned",
+            7.646168632021229e-06
+        ],
+        [
+            "cropType_encoded",
+            0.0
+        ]
+    ]
+}
