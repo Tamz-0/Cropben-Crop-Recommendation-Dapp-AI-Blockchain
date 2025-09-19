@@ -63,7 +63,7 @@ Multi-role dashboards empower Consumers, Farmers, Vendors, Banks, Insurance Agen
 ├── build/contracts/          # Compiled contract artifacts (ABIs, bytecode)
 ├── migrations/               # Truffle migration scripts
 ├── truffle-config.js         # Truffle config
-└── README.md                 # (You are here)
+└── README.md                 
 ```
 
 ---
