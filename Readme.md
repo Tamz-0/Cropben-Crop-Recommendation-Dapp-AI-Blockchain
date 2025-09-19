@@ -1,5 +1,5 @@
-# AI-Integrated Blockchain Framework for Transparent Agricultural Supply Chains
 
+<<<<<<< HEAD
 ## Overview
 
 This project delivers an innovative blockchain-based platform to enhance transparency, trust, and efficiency in agricultural supply chains. By combining smart contracts, machine learning, and a modern web client, the system provides:
@@ -65,6 +65,8 @@ Multi-role dashboards empower Consumers, Farmers, Vendors, Banks, Insurance Agen
 ├── truffle-config.js         # Truffle config
 └── README.md                 
 ```
+=======
+>>>>>>> 690f23fae3994a70b2f83c39ecee076a77eb54e4
 
 ---
 
@@ -133,32 +135,6 @@ POST /api/loan/evaluate
   "previousLoanRepayment": "Good"
 }
 ```
-
----
-
-## Model Performance
-
-- **Risk Model Accuracy:** ~85-90%
-- **Loan Model Accuracy:** ~95-98%
-- **Explainability:** Top features and reasoning returned with each prediction.
-
----
-
-## Blockchain Integration Points
-
-- **Premium in Wei:** Directly usable by smart contracts.
-- **Model Hashing:** Immutable version tracking.
-- **Risk Scoring:** Standardized [0,1] scale.
-- **Decision Auditing:** Full reasoning chain for loan/insurance decisions.
-
----
-
-## Future Enhancements
-
-- Real-time weather and IoT data integration.
-- Parametric insurance index calculations.
-- Advanced ensemble models (XGBoost, Neural Networks).
-- Time-series forecasting for crop yields.
 
 ---
 
