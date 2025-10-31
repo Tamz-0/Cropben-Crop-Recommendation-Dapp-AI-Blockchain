@@ -35,7 +35,7 @@ contract ProductLedger {
         ProductStage stage;
         address actor;
         uint256 timestamp;
-        uint256 price; // Price at this stage (e.g., sale price to next owner)
+        uint256 price; 
     }
 
     mapping(uint256 => ProductCore) public productCores;
@@ -87,9 +87,7 @@ contract ProductLedger {
         );
 
         productIdsByFarmer[msg.sender].push(productCounter);
-        // MODIFIED: Pass 0 as the price for the Sown event.
         _addHistory(productCounter, ProductStage.Sown, 0);
-        //_addHistory(productCounter, ProductStage.Sown);
         emit ProductSown(productCounter, _name, msg.sender);
     }
 
@@ -105,11 +103,9 @@ contract ProductLedger {
         emit ProductHarvested(_id);
     }
 
-    // MODIFIED: This function can now be called by a Farmer OR a Vendor.
     function transferProductToVendor(uint256 _id, address _vendorAddress, uint256 _price) public {
         ProductCore storage core = productCores[_id];
         require(core.currentOwner == msg.sender, "You are not the current owner.");
-        // MODIFIED: A product can be transferred if it's Harvested (from farmer) or already AtVendor (from a previous vendor).
         require(core.stage == ProductStage.Harvested || core.stage == ProductStage.AtVendor, "Product must be Harvested or AtVendor to be transferred.");
         require(userRegistry.getUser(_vendorAddress).role == UserRegistry.UserRole.Vendor, "Receiver must be a registered vendor.");
         require(_price > 0, "Price must be greater than zero.");
@@ -117,12 +113,10 @@ contract ProductLedger {
         core.stage = ProductStage.InTransit;
         core.designatedVendor = _vendorAddress;
         
-        // We only set the farmerSalePrice if the original farmer is the one selling.
         if (core.farmer == msg.sender) {
             core.farmerSalePrice = _price;
         }
 
-        // MODIFIED: Pass the transaction price to be recorded in the history.
         _addHistory(_id, ProductStage.InTransit, _price);
         emit TransferInitiated(_id, msg.sender, _vendorAddress, _price);
     }
@@ -163,7 +157,6 @@ contract ProductLedger {
         emit ProductVerified(_id, msg.sender);
     }
 
-    // MODIFIED: The internal function now accepts a price.
     function _addHistory(uint256 _id, ProductStage _stage, uint256 _price) internal {
         history[_id].push(TraceEvent({
             stage: _stage,

@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-/**
- * @title UserRegistry
- * @dev Manages user registration, roles, and key data like landholding size.
- */
 contract UserRegistry {
     address public owner;
 
@@ -19,14 +15,10 @@ contract UserRegistry {
     }
 
     mapping(address => User) public users;
-    //address[] public userAddresses;
 
-    // --- OPTIMIZATION: Arrays to track addresses by role ---
     address[] public farmerAddresses;
     address[] public bankAddresses;
     address[] public insuranceProviderAddresses;
-    // Add other role arrays as needed
-    // ❗ NEW: Added for consistency
     address[] public verifierAddresses;
 
     event UserRegistered(address indexed userAddress, string name, UserRole role);
@@ -43,7 +35,6 @@ contract UserRegistry {
     function _registerUser(string memory _name, UserRole _role, uint256 _landSize) internal {
         require(!users[msg.sender].isRegistered, "User is already registered.");
         users[msg.sender] = User(msg.sender, _name, _role, true, _landSize);
-        //userAddresses.push(msg.sender);
         if (_role == UserRole.Farmer) {
             farmerAddresses.push(msg.sender);
         } else if (_role == UserRole.Bank) {
@@ -70,24 +61,21 @@ contract UserRegistry {
     function addBank(address _bankAddress, string memory _name) public onlyOwner {
         require(!users[_bankAddress].isRegistered, "Bank is already registered.");
         users[_bankAddress] = User(_bankAddress, _name, UserRole.Bank, true, 0);
-        //userAddresses.push(_bankAddress);
-        bankAddresses.push(_bankAddress); // Correctly adds to the bank list
+        bankAddresses.push(_bankAddress); 
         emit UserRegistered(_bankAddress, _name, UserRole.Bank);
     }
 
     function addInsurance(address _insuranceAddress, string memory _name) public onlyOwner {
         require(!users[_insuranceAddress].isRegistered, "Insurance co. is already registered.");
         users[_insuranceAddress] = User(_insuranceAddress, _name, UserRole.Insurance, true, 0);
-        //userAddresses.push(_insuranceAddress);
-        insuranceProviderAddresses.push(_insuranceAddress); // Correctly adds to the insurance list
+        insuranceProviderAddresses.push(_insuranceAddress); 
         emit UserRegistered(_insuranceAddress, _name, UserRole.Insurance);
     }
     
     function addVerifier(address _verifierAddress, string memory _name) public onlyOwner {
         require(!users[_verifierAddress].isRegistered, "Verifier is already registered.");
         users[_verifierAddress] = User(_verifierAddress, _name, UserRole.Verifier, true, 0);
-        //userAddresses.push(_verifierAddress);
-        verifierAddresses.push(_verifierAddress); // Correctly adds to the verifier list
+        verifierAddresses.push(_verifierAddress); 
         emit UserRegistered(_verifierAddress, _name, UserRole.Verifier);
     }
 
@@ -95,7 +83,6 @@ contract UserRegistry {
         return users[_userAddress];
     }
 
-    // --- OPTIMIZATION: New getter functions ---
     function getBankAddresses() public view returns (address[] memory) {
         return bankAddresses;
     }
@@ -104,11 +91,6 @@ contract UserRegistry {
         return insuranceProviderAddresses;
     }
 
-    /**
-    * @dev Gets multiple User structs from an array of addresses.
-    * @param _addresses The array of user addresses to fetch.
-    * @return An array of User structs.
-    */
     function getUsersByAddresses(address[] memory _addresses) public view returns (User[] memory) {
         User[] memory result = new User[](_addresses.length);
         for (uint i = 0; i < _addresses.length; i++) {

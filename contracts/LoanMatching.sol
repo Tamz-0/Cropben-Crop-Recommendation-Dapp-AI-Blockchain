@@ -16,11 +16,10 @@ contract LoanMatching {
         LoanStatus status;
     }
 
-    // Define a view struct
-struct LoanApplicationView {
-    LoanApplication application;
-    string bankName;
-}
+    struct LoanApplicationView {
+        LoanApplication application;
+        string bankName;
+    }
 
     enum LoanStatus { Pending, Approved, Disbursed, Repaid, Rejected }
 
@@ -28,8 +27,8 @@ struct LoanApplicationView {
 
     event LoanApplied(uint256 indexed appId, address indexed farmer, address indexed bank);
     event LoanStatusUpdated(uint256 indexed appId, LoanStatus newStatus);
+    event LoanRepaid(uint256 indexed appId, address indexed farmer, uint256 amount); 
 
-    // --- OPTIMIZATION: Mapping from farmer address to their application IDs ---
     mapping(address => uint256[]) public applicationIdsByFarmer;
 
     constructor(address _registryAddress) {
@@ -45,7 +44,6 @@ struct LoanApplicationView {
             applicationCounter, msg.sender, _bank, _amount, _insurancePolicyId, LoanStatus.Pending
         );
 
-        // --- MODIFICATION: Add the new application ID to the farmer's list ---
         applicationIdsByFarmer[msg.sender].push(applicationCounter);
 
         emit LoanApplied(applicationCounter, msg.sender, _bank);
@@ -59,7 +57,6 @@ struct LoanApplicationView {
         emit LoanStatusUpdated(_appId, _newStatus);
     }
 
-    // --- OPTIMIZATION: New function to get all application IDs for a farmer ---
     function getApplicationIdsByFarmer(address _farmer) public view returns (uint256[] memory) {
         return applicationIdsByFarmer[_farmer];
     }
@@ -82,5 +79,21 @@ struct LoanApplicationView {
             });
         }
         return views;
+    }
+
+    function repayLoan(uint256 _appId) public payable {
+        LoanApplication storage app = applications[_appId];
+        
+        require(app.farmer == msg.sender, "Only the farmer of this loan can repay.");
+        require(app.status == LoanStatus.Approved, "Loan must be in 'Approved' state to be repaid.");
+        require(msg.value == app.amount, "Incorrect repayment amount sent.");
+
+        (bool sent, ) = payable(app.bank).call{value: msg.value}("");
+        require(sent, "Failed to send Ether to the bank.");
+
+        app.status = LoanStatus.Repaid;
+        
+        emit LoanRepaid(_appId, msg.sender, msg.value);
+        emit LoanStatusUpdated(_appId, LoanStatus.Repaid);
     }
 }

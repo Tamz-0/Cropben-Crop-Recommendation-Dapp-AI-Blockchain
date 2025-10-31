@@ -1,16 +1,11 @@
-// src/pages/ProductPublicView.jsx
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Web3 from "web3";
-import ProductLedger from "../abis/ProductLedger.json";
-// ✅ --- ADDED ---: Import UserRegistry ABI and address
-import UserRegistry from "../abis/UserRegistry.json";
+import ProductLedger from "../../../build/contracts/ProductLedger.json";
+import UserRegistry from "../../../build/contracts/UserRegistry.json";
 import { PRODUCT_LEDGER_ADDRESS, USER_REGISTRY_ADDRESS } from "../config.js";
 
-// For local development, this is your Ganache RPC server.
-// For a live app, you would replace this with a public RPC URL from Infura or Alchemy.
-const PUBLIC_RPC_URL = "http://127.0.0.1:7545";
+const PUBLIC_RPC_URL = "http://127.0.0.1:7545"; // Gansache local blockchain URL
 
 const stageToString = (stage) => {
   const stages = ["Sown", "Harvested", "In Transit", "At Vendor", "Sold"];
@@ -22,7 +17,6 @@ const ProductPublicView = () => {
   const [productCore, setProductCore] = useState(null);
   const [productMeta, setProductMeta] = useState(null);
   const [history, setHistory] = useState([]);
-  // ✅ --- ADDED ---: State to store names fetched from UserRegistry
   const [actorNames, setActorNames] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,39 +25,32 @@ const ProductPublicView = () => {
     const fetchProductData = async () => {
       if (!productId) return;
       try {
-        // 1. Set up Web3 and contract instances
         const web3 = new Web3(new Web3.providers.HttpProvider(PUBLIC_RPC_URL));
         const productLedger = new web3.eth.Contract(
           ProductLedger.abi,
           PRODUCT_LEDGER_ADDRESS
         );
-        // ✅ --- ADDED ---: Create UserRegistry contract instance
         const userRegistry = new web3.eth.Contract(
           UserRegistry.abi,
           USER_REGISTRY_ADDRESS
         );
 
-        // 2. Fetch product data and history in parallel
         const [details, historyEvents] = await Promise.all([
           productLedger.methods.getProductDetails(productId).call(),
           productLedger.methods.getProductHistory(productId).call(),
         ]);
 
-        // 3. Destructure and validate product data
         const core = details[0];
         const meta = details[1];
 
         if (Number(core.id) === 0) {
           throw new Error("Product not found.");
         }
-        // 4. Set primary state for product details and history
         setProductCore(core);
         setProductMeta(meta);
-        const reversedHistory = [...historyEvents].reverse(); // Show most recent first
+        const reversedHistory = [...historyEvents].reverse();
         setHistory(reversedHistory);
 
-        // ✅ --- ADDED ---: 5. Fetch names for all actors involved
-        // Collect all unique addresses from the product data
         const addressesToFetch = new Set([
           core.farmer,
           core.currentOwner,
@@ -71,13 +58,11 @@ const ProductPublicView = () => {
         ]);
         const uniqueAddresses = Array.from(addressesToFetch);
 
-        // Fetch user data for each unique address
         const namePromises = uniqueAddresses.map((address) =>
           userRegistry.methods.getUser(address).call()
         );
         const userResults = await Promise.all(namePromises);
 
-        // Create a mapping from address to name
         const namesMap = userResults.reduce((acc, user) => {
           if (user && user.isRegistered) {
             acc[user.userAddress] = user.name;
@@ -109,59 +94,46 @@ const ProductPublicView = () => {
     return <div className="text-center p-10 text-red-500">{error}</div>;
   if (!productCore || !productMeta) return null;
 
-  // ✅ --- REFACTORED ---: The entire view is now more detailed and user-friendly
   return (
     <div className="bg-gray-100 min-h-screen font-sans text-gray-800 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-           {" "}
       <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 w-full max-w-2xl">
-               {" "}
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           {productMeta.name}
         </h1>
-               {" "}
         <p className="text-gray-600 mb-6">
-                    Product ID:{" "}
+          Product ID:
           <span className="font-mono bg-gray-200 px-2 py-1 rounded">
             {String(productCore.id)}
           </span>
-                 {" "}
         </p>
-               {" "}
         <div className="space-y-4 text-gray-700">
-                   {" "}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                       {" "}
             <p>
-              <strong>Current Status:</strong>{" "}
+              <strong>Current Status:</strong>
               <span className="font-semibold text-blue-600">
                 {stageToString(productCore.stage)}
               </span>
             </p>
-                       {" "}
             <p>
-              <strong>Farming Practice:</strong>{" "}
+              <strong>Farming Practice:</strong>
               {Number(productCore.practice) === 1 ? "Organic" : "Inorganic"}
             </p>
-                       {" "}
             <p>
               <strong>Harvest Location:</strong> {productMeta.location}
             </p>
-                       {" "}
             <p>
-              <strong>Quantity:</strong> {String(productCore.quantity)}{" "}
+              <strong>Quantity:</strong> {String(productCore.quantity)}
               {productMeta.unit}
             </p>
-                       {" "}
             <p>
-              <strong>Sowing Date:</strong>{" "}
+              <strong>Sowing Date:</strong>
               {new Date(
                 Number(productCore.sowingDate) * 1000
               ).toLocaleDateString("en-IN")}
             </p>
-                       {" "}
             {Number(productCore.harvestDate) > 0 ? (
               <p>
-                <strong>Harvest Date:</strong>{" "}
+                <strong>Harvest Date:</strong>
                 {new Date(
                   Number(productCore.harvestDate) * 1000
                 ).toLocaleDateString("en-IN")}
@@ -171,35 +143,27 @@ const ProductPublicView = () => {
                 <strong>Harvest Date:</strong> Not Harvested Yet
               </p>
             )}
-                       {" "}
             <p>
-              <strong>Verified:</strong>{" "}
+              <strong>Verified:</strong>
               {productCore.isVerified ? (
                 <span className="text-green-600 font-bold">Yes ✅</span>
               ) : (
                 <span className="text-red-600 font-bold">No ❌</span>
               )}
             </p>
-                     {" "}
           </div>
-                   {" "}
           <div className="border-t pt-4 mt-4 space-y-2">
-                       {" "}
             <p className="break-words">
-                            <strong>Farmer:</strong>      
-                    {" "}
+              <strong>Farmer:</strong>
               <span
                 className="font-mono text-sm ml-2"
                 title={productCore.farmer}
               >
                 {actorNames[productCore.farmer] || productCore.farmer}
               </span>
-                         {" "}
             </p>
-                       {" "}
             <p className="break-words">
-                            <strong>Current Owner:</strong>   
-                       {" "}
+              <strong>Current Owner:</strong>
               <span
                 className="font-mono text-sm ml-2"
                 title={productCore.currentOwner}
@@ -207,28 +171,19 @@ const ProductPublicView = () => {
                 {actorNames[productCore.currentOwner] ||
                   productCore.currentOwner}
               </span>
-                         {" "}
             </p>
-                     {" "}
           </div>
-            
         </div>
 
-                {/* --- Product Journey --- */}       {" "}
         <div className="mt-8">
-                   {" "}
           <h2 className="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">
             Product Journey
           </h2>
-                   {" "}
           {history.length > 0 ? (
             <div className="space-y-6">
-                           {" "}
               {history.map((event, index) => (
                 <div key={index} className="flex items-start">
-                                   {" "}
                   <div className="flex flex-col items-center mr-4">
-                                       {" "}
                     <div
                       className={`w-4 h-4 rounded-full ${
                         index === 0
@@ -236,26 +191,20 @@ const ProductPublicView = () => {
                           : "bg-gray-400"
                       }`}
                     ></div>
-                                       {" "}
                     {index < history.length - 1 && (
                       <div className="w-0.5 h-16 bg-gray-300"></div>
                     )}
-                                     {" "}
                   </div>
-                                   {" "}
                   <div className="bg-gray-50 p-3 rounded-md flex-1">
-                                       {" "}
                     <p className="font-bold text-gray-900">
                       {stageToString(event.stage)}
                     </p>
-                    {/* MODIFIED: Display the price if it's greater than 0 */}
-                                        {Number(event.price) > 0 && (
-                                            <p className="font-semibold text-green-700 text-lg">
-                                                Sale Price: ₹{String(event.price)}
-                                            </p>
-                                        )}
+                    {Number(event.price) > 0 && (
+                      <p className="font-semibold text-green-700 text-lg">
+                        Sale Price: ₹{String(event.price)}
+                      </p>
+                    )}
                     <p className="text-sm text-gray-600">
-                                           {" "}
                       {new Date(Number(event.timestamp) * 1000).toLocaleString(
                         "en-IN",
                         {
@@ -266,34 +215,25 @@ const ProductPublicView = () => {
                           minute: "2-digit",
                         }
                       )}
-                                         {" "}
                     </p>
-                                       {" "}
                     <p
                       className="text-xs text-gray-500 font-mono break-words"
                       title={event.actor}
                     >
-                                            By:{" "}
-                      {actorNames[event.actor] || event.actor}        
-                                {" "}
+                      By:
+                      {actorNames[event.actor] || event.actor}
                     </p>
-                                     {" "}
                   </div>
-                                 {" "}
                 </div>
               ))}
-                         {" "}
             </div>
           ) : (
             <p className="text-gray-500">
               No history available for this product.
             </p>
           )}
-                 {" "}
         </div>
-             {" "}
       </div>
-         {" "}
     </div>
   );
 };
