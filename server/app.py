@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from utils import enrich_data, build_features, predict_risk, calculate_premium
 from flask_cors import CORS
+from loan_engine import LoanMatchingEngine
 import os
 
 app = Flask(__name__)
@@ -72,6 +73,36 @@ def estimate_insurance():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    
+
+@app.route('/loan/evaluate', methods=['POST'])
+def evaluate_loan():
+    try:
+        payload = request.get_json()
+        if not payload:
+            return jsonify({"error": "Invalid JSON"}), 400
+
+        required_fields = ["landSize", "cropType", "farmingMethod", "isInsured", "district"]
+        if not all(field in payload for field in required_fields):
+            return jsonify({"error": f"Missing one of required fields: {required_fields}"}), 400
+        
+        try:
+            payload["landSize"] = float(payload.get("landSize", 0))
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid landSize. Must be a number."}), 400
+        
+        engine = LoanMatchingEngine()
+        report = engine.generate_report(payload)
+        
+        return jsonify({
+            "success": True,
+            "data": report
+        })
+
+    except Exception as e:
+        print(f"Error in loan evaluation: {e}")
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
+    
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
