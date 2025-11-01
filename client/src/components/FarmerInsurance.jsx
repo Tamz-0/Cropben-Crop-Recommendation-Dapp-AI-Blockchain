@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-// Helper function to get a Tailwind CSS class based on policy status for color-coding
 const getStatusClass = (status) => {
   const s = Number(status);
   switch (s) {
@@ -17,7 +16,6 @@ const getStatusClass = (status) => {
   }
 };
 
-// Helper function to convert policy status enum to a readable string
 const statusToString = (status) => {
   const statuses = [
     "Pending Approval",
@@ -53,7 +51,9 @@ const FarmerInsurance = ({ cropInsurance, account, showNotification }) => {
   };
 
   useEffect(() => {
-    fetchPolicies();
+    if (cropInsurance && account) {
+      fetchPolicies();
+    }
   }, [cropInsurance, account]);
 
   const handleRequestClaim = async (policyId) => {
@@ -99,10 +99,11 @@ const FarmerInsurance = ({ cropInsurance, account, showNotification }) => {
                   </span>
                 </p>
                 <p>
-                  <strong>Sum Insured:</strong> {String(policy.sumInsured)} INR
+                  <strong>Sum Insured:</strong> {String(policy.sumInsuredInr)}{" "}
+                  INR
                 </p>
                 <p>
-                  <strong>Premium:</strong> {String(policy.premium)} INR
+                  <strong>Premium:</strong> {String(policy.premiumWei)} WEI
                 </p>
                 {Number(policy.status) === 1 && (
                   <button

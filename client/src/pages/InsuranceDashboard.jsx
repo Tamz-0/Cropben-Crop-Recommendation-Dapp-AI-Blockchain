@@ -6,6 +6,7 @@ const policyStatusToString = (status) => {
     "Active",
     "Claim Requested",
     "Claim Approved",
+    "Claim Rejected",
     "Paid Out",
     "Expired",
     "Rejected",
@@ -18,14 +19,16 @@ const getStatusClass = (status) => {
   switch (s) {
     case 1:
       return "text-green-600 font-semibold"; // Active
-    case 6:
-      return "text-red-600 font-semibold"; // Rejected
-    case 4:
-      return "text-blue-600 font-semibold"; // PaidOut
-    case 5:
-      return "text-gray-500"; // Expired
     case 3:
       return "text-indigo-600 font-semibold"; // Claim Approved
+    case 4:
+      return "text-red-600 font-semibold"; // Claim Rejected
+    case 5:
+      return "text-blue-600 font-semibold"; // PaidOut
+    case 6:
+      return "text-gray-500"; // Expired
+    case 7:
+      return "text-red-600 font-semibold"; // Rejected
     default:
       return "text-yellow-600 font-semibold"; // Pending/Requested
   }
@@ -34,7 +37,7 @@ const getStatusClass = (status) => {
 const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
   const [pendingPolicies, setPendingPolicies] = useState([]);
   const [activeClaims, setActiveClaims] = useState([]);
-  const [historicalPolicies, setHistoricalPolicies] = useState([]); // 🆕 For policy history
+  const [historicalPolicies, setHistoricalPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
@@ -131,6 +134,23 @@ const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
     }
   };
 
+  const handleRejectClaim = async (policyId) => {
+    try {
+      await cropInsurance.methods.rejectClaim(policyId).send({ from: account });
+      showNotification(
+        `Claim for Policy #${policyId} has been rejected.`,
+        "info"
+      );
+      fetchDashboardData();
+    } catch (err) {
+      console.error("Error rejecting claim:", err);
+      showNotification(
+        "Failed to reject claim. Please check the policy status.",
+        "error"
+      );
+    }
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md space-y-8">
       <h3 className="text-2xl font-semibold mb-4">Insurance Agent Dashboard</h3>
@@ -141,21 +161,15 @@ const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
           <p>Loading...</p>
         ) : pendingPolicies.length > 0 ? (
           pendingPolicies.map((p) => (
-            <div
-              key={p.id}
-              className="border p-4 rounded-md flex justify-between items-center mb-3"
-            >
-              <div>
+            <div key={p.id} className="border p-4 rounded-md mb-3 space-y-2">
+              <div className="flex justify-between items-start">
                 <p>
                   <strong>Policy ID:</strong> {String(p.id)} (for Product #
                   {String(p.productId)})
                 </p>
                 <p className="text-sm">
-                  <strong>Farmer:</strong>{" "}
+                  <strong>Farmer:</strong>
                   <span className="font-mono text-xs">{p.farmer}</span>
-                </p>
-                <p>
-                  <strong>Sum Insured:</strong> {String(p.sumInsured)} INR
                 </p>
               </div>
               <div className="flex space-x-2">
@@ -171,6 +185,50 @@ const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
                 >
                   Reject
                 </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm bg-gray-50 p-3 rounded">
+                <p>
+                  <strong>Risk Score:</strong>
+                  <span className="font-semibold capitalize">
+                    {p.riskScore}
+                  </span>
+                </p>
+                <p>
+                  <strong>Season:</strong>
+                  <span className="font-semibold capitalize">{p.season}</span>
+                </p>
+                <p>
+                  <strong>Sum Insured (INR):</strong>
+                  <span className="font-semibold">
+                    {String(p.sumInsuredInr)} INR
+                  </span>
+                </p>
+                <p>
+                  <strong>Sum Insured (WEI):</strong>
+                  <span className="font-mono text-xs">
+                    {String(p.sumInsuredWei)}
+                  </span>
+                </p>
+              </div>
+              <div className="text-sm bg-gray-50 p-3 rounded space-y-1">
+                <p>
+                  <strong>Farmer Premium (WEI):</strong>
+                  <span className="font-mono text-xs">
+                    {String(p.premiumWei)}
+                  </span>
+                </p>
+                <p>
+                  <strong>Govt. Subsidy (WEI):</strong>
+                  <span className="font-mono text-xs">
+                    {String(p.governmentSubsidyWei)}
+                  </span>
+                </p>
+                <p>
+                  <strong>Total Premium (WEI):</strong>
+                  <span className="font-mono text-xs">
+                    {String(p.totalActuarialPremiumWei)}
+                  </span>
+                </p>
               </div>
             </div>
           ))
@@ -196,22 +254,30 @@ const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
                   <strong>Policy ID:</strong> {String(p.id)}
                 </p>
                 <p className="text-sm">
-                  <strong>Farmer:</strong>{" "}
+                  <strong>Farmer:</strong>
                   <span className="font-mono text-xs">{p.farmer}</span>
                 </p>
                 <p>
-                  <strong>Claim Status:</strong>{" "}
-                  <span className="font-semibold">
+                  <strong>Claim Status:</strong>
+                  <span className={getStatusClass(p.status)}>
                     {policyStatusToString(p.status)}
                   </span>
                 </p>
               </div>
-              <button
-                onClick={() => handleApproveClaim(p.id)}
-                className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
-              >
-                Approve Claim
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleApproveClaim(p.id)}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                >
+                  Approve Claim
+                </button>
+                <button
+                  onClick={() => handleRejectClaim(p.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Reject Claim
+                </button>
+              </div>
             </div>
           ))
         ) : (
@@ -233,17 +299,39 @@ const InsuranceDashboard = ({ cropInsurance, account, showNotification }) => {
                   Policy ID: {String(p.id)}
                 </p>
                 <p className="text-sm">
-                  <strong>Farmer:</strong>{" "}
+                  <strong>Farmer:</strong>
                   <span className="font-mono text-xs">{p.farmer}</span>
                 </p>
                 <p>
-                  <strong>Status:</strong>{" "}
+                  <strong>Status:</strong>
                   <span className={getStatusClass(p.status)}>
                     {policyStatusToString(p.status)}
                   </span>
                 </p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm bg-white p-3 rounded">
                 <p>
-                  <strong>Sum Insured:</strong> {String(p.sumInsured)} INR
+                  <strong>Risk Score:</strong>
+                  <span className="font-semibold capitalize">
+                    {p.riskScore}
+                  </span>
+                </p>
+                <p>
+                  <strong>Season:</strong>
+                  <span className="font-semibold capitalize">{p.season}</span>
+                </p>
+                <p>
+                  <strong>Sum Insured (INR):</strong>
+                  <span className="font-semibold">
+                    {String(p.sumInsuredInr)} INR
+                  </span>
+                </p>
+                <p>
+                  <strong>Sum Insured (WEI):</strong>
+                  <span className="font-mono text-xs">
+                    {String(p.sumInsuredWei)}
+                  </span>
+                  Details{" "}
                 </p>
               </div>
             </div>

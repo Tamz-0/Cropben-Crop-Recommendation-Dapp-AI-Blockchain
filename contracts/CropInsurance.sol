@@ -7,16 +7,21 @@ contract CropInsurance {
     UserRegistry public userRegistry;
     uint256 public policyCounter;
 
-    enum PolicyStatus { PendingApproval, Active, ClaimRequested, ClaimApproved, PaidOut, Expired, Rejected }
+    enum PolicyStatus { PendingApproval, Active, ClaimRequested, ClaimApproved, ClaimRejected, PaidOut, Expired, Rejected }
 
     struct Policy {
-        uint256 id;
-        address farmer;
-        address insuranceProvider;
-        uint256 productId;
-        uint256 sumInsured;
-        uint256 premium;
-        PolicyStatus status;
+        uint256 id;                 
+        address farmer;             
+        address insuranceProvider;  
+        uint256 productId;          
+        uint256 sumInsuredWei;      
+        uint256 sumInsuredInr;      
+        uint256 premiumWei;         
+        PolicyStatus status;        
+        uint256 governmentSubsidyWei; 
+        uint256 totalActuarialPremiumWei;
+        string riskScore;           
+        string season;              
     }
 
     event PolicyRequested(uint256 indexed policyId, address indexed farmer, address indexed provider);
@@ -24,6 +29,7 @@ contract CropInsurance {
     event PolicyRejected(uint256 indexed policyId);
     event ClaimRequested(uint256 indexed policyId, address indexed farmer);
     event ClaimApproved(uint256 indexed policyId);
+    event ClaimRejected(uint256 indexed policyId);
     event PayoutCompleted(uint256 indexed policyId);
 
     mapping(uint256 => Policy) public policies;
@@ -34,13 +40,34 @@ contract CropInsurance {
         userRegistry = UserRegistry(_registryAddress);
     }
 
-    function requestPolicy(uint256 _productId, uint256 _sumInsured, uint256 _premium, address _insuranceProvider) public {
+    function requestPolicy(
+        uint256 _productId,
+        uint256 _sumInsuredWei,
+        uint256 _sumInsuredInr,
+        uint256 _premiumWei,
+        address _insuranceProvider,
+        uint256 _governmentSubsidyWei,
+        uint256 _totalActuarialPremiumWei,
+        string memory _riskScore,
+        string memory _season
+    ) public {
         require(userRegistry.getUser(msg.sender).role == UserRegistry.UserRole.Farmer, "Only farmers can request policies.");
         require(userRegistry.getUser(_insuranceProvider).role == UserRegistry.UserRole.Insurance, "Invalid insurance provider address.");
         
         policyCounter++;
         policies[policyCounter] = Policy(
-            policyCounter, msg.sender, _insuranceProvider, _productId, _sumInsured, _premium, PolicyStatus.PendingApproval
+            policyCounter,
+            msg.sender,
+            _insuranceProvider,
+            _productId,
+            _sumInsuredWei,
+            _sumInsuredInr,
+            _premiumWei,
+            PolicyStatus.PendingApproval,
+            _governmentSubsidyWei,
+            _totalActuarialPremiumWei,
+            _riskScore,
+            _season
         );
 
         policyIdsByFarmer[msg.sender].push(policyCounter);
@@ -84,6 +111,15 @@ contract CropInsurance {
         
         policy.status = PolicyStatus.ClaimApproved;
         emit ClaimApproved(_policyId);
+    }
+
+    function rejectClaim(uint256 _policyId) public {
+        Policy storage policy = policies[_policyId];
+        require(policy.insuranceProvider == msg.sender, "You are not the provider for this policy.");
+        require(policy.status == PolicyStatus.ClaimRequested, "Claim must be requested by farmer first.");
+        
+        policy.status = PolicyStatus.ClaimRejected;
+        emit ClaimRejected(_policyId);
     }
 
     function markAsPaid(uint256 _policyId) public {

@@ -13,6 +13,7 @@ const FarmerProducts = ({
   userRegistry,
   showNotification,
   refreshTrigger,
+  allAccounts,
 }) => {
   // Form State
   const [productName, setProductName] = useState("");
@@ -46,6 +47,9 @@ const FarmerProducts = ({
 
   // State to manage the QR code modal
   const [qrCodeProductId, setQrCodeProductId] = useState(null);
+
+  const [farmerLandSize, setFarmerLandSize] = useState(0);
+  const [irrigationUsed, setIrrigationUsed] = useState(true); 
 
   const fetchProducts = async () => {
     if (!productLedger || !account) return;
@@ -113,8 +117,20 @@ const FarmerProducts = ({
   };
 
   useEffect(() => {
+    const fetchFarmerDetails = async () => {
+      if (!userRegistry || !account) return;
+      try {
+        const userDetails = await userRegistry.methods.getUser(account).call();
+        setFarmerLandSize(Number(userDetails.landholdingSize));
+      } catch (err) {
+        console.error("Error fetching farmer details:", err);
+        showNotification("Could not fetch farmer profile data.", "error");
+      }
+    };
+
     fetchProducts();
     fetchInsuranceProviders();
+    fetchFarmerDetails(); 
   }, [productLedger, userRegistry, account, refreshTrigger]);
 
   const handleLogSownProduct = async (e) => {
@@ -214,6 +230,16 @@ const FarmerProducts = ({
       );
       return;
     }
+
+    if (farmerLandSize <= 0) {
+      showNotification(
+        "Farmer land size is missing or invalid (must be > 0). Cannot get quote. Please check your user profile.",
+        "error"
+      );
+      console.error("Farmer land size is 0 or not loaded.", farmerLandSize);
+      return;
+    }
+
     setIsProviderModalOpen(false);
     setQuoteLoading(true);
     showNotification(
@@ -222,32 +248,41 @@ const FarmerProducts = ({
     );
 
     try {
-      const url = "http://localhost:8000/api/insurance/score";
+      const url = "http://localhost:5000/insurance/estimate";
       const providerDetails = insuranceProviders.find(
         (p) => p.address === selectedProviderAddress
       );
+
+      const sowingTimestamp = Number(selectedProductForQuote.sowingDate) * 1000;
+      const sowingMonth = new Date(sowingTimestamp).getMonth() + 1;
+
       const payload = {
         cropType: selectedProductForQuote.name,
-        areaHa: 50 / 1000,
+        areaHa: farmerLandSize, 
         farmingMethod:
           Number(selectedProductForQuote.practice) === 1
             ? "Organic"
-            : "Inorganic",
+            : "Conventional ",
         district: selectedProductForQuote.location,
-        // farmerRating: 4,
-        toolsOwned: 12,
-        // insuranceStatus: 0
+        sowing_month: sowingMonth,
+        irrigatonUsed: irrigationUsed, 
       };
+
+      console.log("Sending payload to insurance API:", payload);
+
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("API Error Response:", errText);
+        throw new Error(`Network response was not ok: ${response.statusText}`);
+      }
 
       const quoteResult = await response.json();
       console.log("Received quote:", quoteResult);
-      // Store the selected provider's details along with the quote
       quoteResult.providerName = providerDetails
         ? providerDetails.name
         : "Unknown Provider";
@@ -270,16 +305,33 @@ const FarmerProducts = ({
     if (
       !cropInsurance ||
       !currentQuote ||
+      !currentQuote.prediction ||
       !currentQuote.providerAddress ||
       !selectedProductForQuote
     ) {
       showNotification(
-        "Error: Missing required data to accept the quote.",
+        "Error: Missing required quote data to accept.",
         "error"
       );
       return;
     }
     const insuranceProviderAddress = currentQuote.providerAddress;
+
+    const {
+      sum_insured, // INR
+      farmer_pays_wei,
+      govt_subsidy_wei,
+      total_actuarial_premium_wei,
+      risk_score,
+      season,
+      conversion_rate_eth_inr,
+    } = currentQuote.prediction;
+
+    // Calculate sumInsuredWei
+    const sumInsuredWei =
+      (BigInt(Math.round(sum_insured * 100)) * 10n ** 18n) /
+      BigInt(Math.round(conversion_rate_eth_inr * 100));
+
     showNotification(
       `Submitting your policy request to the blockchain...`,
       "info"
@@ -288,11 +340,17 @@ const FarmerProducts = ({
       await cropInsurance.methods
         .requestPolicy(
           selectedProductForQuote.id,
-          0,
-          currentQuote.premiumWei,
-          insuranceProviderAddress
+          sumInsuredWei.toString(), // _sumInsuredWei
+          Math.round(sum_insured), // _sumInsuredInr
+          farmer_pays_wei.toString(), // _premiumWei
+          insuranceProviderAddress,
+          govt_subsidy_wei.toString(),
+          total_actuarial_premium_wei.toString(),
+          risk_score,
+          season
         )
         .send({ from: account });
+
       showNotification(
         "Policy request submitted! Awaiting insurer approval.",
         "success"
@@ -369,7 +427,7 @@ const FarmerProducts = ({
                 className="bg-gray-50 p-4 rounded-lg shadow space-y-2"
               >
                 <p className="font-bold text-lg">
-                  {p.name}{" "}
+                  {p.name}
                   <span className="font-mono text-sm text-gray-500">
                     (ID: {String(p.id)})
                   </span>
@@ -434,23 +492,44 @@ const FarmerProducts = ({
               Transfer Product to Vendor
             </h3>
             <p className="mb-4 text-gray-600">
-              Enter the vendor's Ethereum address to transfer ownership of{" "}
-              <strong>{productToTransfer?.name}</strong> (ID:{" "}
+              Select a vendor from the list or enter their address manually to
+              transfer <strong>{productToTransfer?.name}</strong> (ID:
               {String(productToTransfer?.id)}).
             </p>
-            <input
-              value={vendorAddress}
-              onChange={(e) => setVendorAddress(e.target.value)}
-              placeholder="0x..."
-              className="border p-2 rounded w-full font-mono"
-            />
-            <input
-              type="number"
-              value={salePrice}
-              onChange={(e) => setSalePrice(e.target.value)}
-              placeholder="Sale Price (in INR)"
-              className="border p-2 rounded w-full"
-            />
+
+            <div className="space-y-4">
+              <select
+                value={vendorAddress}
+                onChange={(e) => setVendorAddress(e.target.value)}
+                className="border p-2 rounded w-full font-mono"
+              >
+                <option value="">Select Vendor Address from List</option>
+                {allAccounts
+                  .filter((acc) => acc.toLowerCase() !== account.toLowerCase())
+                  .map((acc) => (
+                    <option key={acc} value={acc}>
+                      {acc}
+                    </option>
+                  ))}
+              </select>
+
+              <input
+                type="text"
+                value={vendorAddress}
+                onChange={(e) => setVendorAddress(e.target.value)}
+                placeholder="Or enter vendor address manually"
+                className="border p-2 rounded w-full font-mono"
+              />
+
+              <input
+                type="number"
+                value={salePrice}
+                onChange={(e) => setSalePrice(e.target.value)}
+                placeholder="Sale Price (in INR)"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+
             <div className="mt-6 flex justify-end space-x-4">
               <button
                 onClick={() => setIsTransferModalOpen(false)}
@@ -460,8 +539,9 @@ const FarmerProducts = ({
               </button>
               <button
                 onClick={handleTransferToVendor}
-                disabled={!vendorAddress || transferLoading}
+                disabled={!vendorAddress || !salePrice || transferLoading}
                 className="px-4 py-2 rounded text-white bg-teal-600 disabled:bg-gray-400"
+                s
               >
                 {transferLoading ? "Processing..." : "Confirm Transfer"}
               </button>
@@ -477,8 +557,8 @@ const FarmerProducts = ({
               Select Insurance Provider
             </h3>
             <p className="mb-4 text-gray-600">
-              Choose a company to get a quote for your{" "}
-              {selectedProductForQuote?.name}.
+              Choose a company and settings for your quote on
+              <strong>{selectedProductForQuote?.name}</strong>.
             </p>
             <div className="space-y-4">
               <select
@@ -498,6 +578,20 @@ const FarmerProducts = ({
                   </option>
                 )}
               </select>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Is irrigation used for this crop?
+                </label>
+                <select
+                  value={String(irrigationUsed)}
+                  onChange={(e) => setIrrigationUsed(e.target.value === "true")}
+                  className="border p-2 rounded w-full bg-white"
+                >
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
             </div>
             <div className="mt-6 flex justify-end space-x-4">
               <button
@@ -518,14 +612,14 @@ const FarmerProducts = ({
         </div>
       )}
 
-      {isQuoteModalOpen && currentQuote && (
+      {isQuoteModalOpen && currentQuote && currentQuote.prediction && (
         <div className="fixed inset-0 bg-opacity-80 flex justify-center items-center backdrop-blur-sm">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <h3 className="text-2xl font-bold mb-2">
               Insurance Quote Received
             </h3>
             <p className="mb-4 text-gray-600">
-              Review the offer for your {selectedProductForQuote?.name} (ID:{" "}
+              Review the offer for your {selectedProductForQuote?.name} (ID:
               {String(selectedProductForQuote?.id)}).
             </p>
             <div className="space-y-3 bg-gray-50 p-4 rounded-md">
@@ -533,15 +627,42 @@ const FarmerProducts = ({
                 <strong>Insurance Provider:</strong> {currentQuote.providerName}
               </p>
               <p>
-                <strong>Annual Premium:</strong>{" "}
-                <span className="font-semibold text-red-600">
-                  ₹{currentQuote.premiumWei}
+                <strong>Sum Insured (Coverage):</strong>
+                <span className="font-semibold text-green-600">
+                  ₹{currentQuote.prediction.sum_insured.toLocaleString()}
+                </span>
+              </p>
+              <hr />
+              <p>
+                <strong>Total Actuarial Premium:</strong>
+                <span className="font-medium text-gray-700">
+                  ₹
+                  {currentQuote.prediction.total_actuarial_premium_inr.toLocaleString()}
                 </span>
               </p>
               <p>
-                <strong>Sum Insured (Coverage):</strong>{" "}
-                <span className="font-semibold text-green-600">
-                  ₹{currentQuote.sumInsured || 0}
+                <strong>Government Subsidy:</strong>
+                <span className="font-medium text-blue-600">
+                  ₹{currentQuote.prediction.govt_subsidy_inr.toLocaleString()}
+                </span>
+              </p>
+              <p>
+                <strong>Your Premium (Farmer Pays):</strong>
+                <span className="font-semibold text-red-600 text-lg">
+                  ₹{currentQuote.prediction.farmer_pays_inr.toLocaleString()}
+                </span>
+              </p>
+              <hr />
+              <p>
+                <strong>Risk Score:</strong>
+                <span className="font-semibold capitalize">
+                  {currentQuote.prediction.risk_score}
+                </span>
+              </p>
+              <p>
+                <strong>Sowing Season:</strong>
+                <span className="font-semibold capitalize">
+                  {currentQuote.prediction.season}
                 </span>
               </p>
             </div>

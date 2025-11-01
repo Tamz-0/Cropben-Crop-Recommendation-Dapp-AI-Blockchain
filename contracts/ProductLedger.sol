@@ -147,10 +147,16 @@ contract ProductLedger {
     }
 
     function verifyProduct(uint256 _id) public {
+        ProductCore storage core = productCores[_id];
         require(userRegistry.getUser(msg.sender).role == UserRegistry.UserRole.Verifier, "Only verifiers can certify products.");
+        
+        require(core.stage == ProductStage.Sown || core.stage == ProductStage.Harvested, "Verification can only be done during Sown or Harvested stages.");
+        
         require(!hasVerified[_id][msg.sender], "You have already verified this product.");
+        
         hasVerified[_id][msg.sender] = true;
         verificationCount[_id]++;
+        
         if (verificationCount[_id] >= requiredVerifications) {
             productCores[_id].isVerified = true;
         }

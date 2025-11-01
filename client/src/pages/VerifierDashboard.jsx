@@ -40,15 +40,19 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
         .requiredVerifications()
         .call();
 
-      const productsList = cores.map((core, index) => ({
-        ...core,
-        ...metadata[index],
-        id: Number(core.id),
-        stage: stageToString(Number(core.stage)),
-        practice: Number(core.practice) === 1 ? "Organic" : "Inorganic",
-        verificationProgress: `${verificationCounts[index]} / ${requiredCount}`,
-        currentUserHasVerified: userHasVerifiedFlags[index],
-      }));
+      const productsList = cores.map((core, index) => {
+        const numericStage = Number(core.stage);
+        return {
+          ...core,
+          ...metadata[index],
+          id: Number(core.id),
+          stageString: stageToString(numericStage),
+          stageNumber: numericStage,
+          practice: Number(core.practice) === 1 ? "Organic" : "Inorganic",
+          verificationProgress: `${verificationCounts[index]} / ${requiredCount}`,
+          currentUserHasVerified: userHasVerifiedFlags[index],
+        };
+      });
 
       const sortedProducts = productsList.sort(
         (a, b) => Number(b.id) - Number(a.id)
@@ -100,6 +104,8 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
       console.error("Verification error:", err);
       const errorMessage = err.message.includes("You have already verified")
         ? "You have already cast your vote for this product."
+        : err.message.includes("Verification can only be done")
+        ? "Verification failed: Product is not in Sown or Harvested stage."
         : "Failed to submit verification.";
       showNotification(errorMessage, "error");
     } finally {
@@ -132,7 +138,7 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
               type="text"
               placeholder="Search by Product ID, Name, Farmer, or Practice..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.g.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -173,7 +179,7 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
                       </td>
                       <td className="py-3 px-4 font-semibold">{p.name}</td>
                       <td className="py-3 px-4">{p.practice}</td>
-                      <td className="py-3 px-4">{stageToString(p.stage)}</td>
+                      <td className="py-3 px-4">{p.stageString}</td>
 
                       <td className="py-3 px-4 text-center">
                         {p.isVerified ? (
@@ -186,7 +192,6 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
                           </span>
                         )}
                       </td>
-
                       <td className="py-3 px-4 text-center">
                         {p.isVerified ? (
                           <span className="text-green-600 font-semibold">
@@ -196,7 +201,7 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
                           <span className="text-gray-500 font-semibold">
                             Voted
                           </span>
-                        ) : (
+                        ) : p.stageNumber === 0 || p.stageNumber === 1 ? (
                           <button
                             onClick={() => handleVerify(p.id)}
                             disabled={verifyingId === p.id}
@@ -204,6 +209,10 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
                           >
                             {verifyingId === p.id ? "Submitting..." : "Verify"}
                           </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">
+                            (Wrong Stage)
+                          </span>
                         )}
                       </td>
                     </tr>

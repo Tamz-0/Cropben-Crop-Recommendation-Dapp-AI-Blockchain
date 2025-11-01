@@ -18,6 +18,7 @@ const Dashboard = ({
   showNotification,
   refreshTrigger,
   triggerRefresh,
+  allAccounts,
 }) => {
   const renderDashboard = () => {
     switch (userRole) {
@@ -31,6 +32,7 @@ const Dashboard = ({
             loanMatching={loanMatching}
             showNotification={showNotification}
             refreshTrigger={refreshTrigger}
+            allAccounts={allAccounts}
           />
         );
       case 2: // Vendor
@@ -39,6 +41,7 @@ const Dashboard = ({
             productLedger={productLedger}
             account={account}
             showNotification={showNotification}
+            allAccounts={allAccounts}
           />
         );
       case 3: // Consumer

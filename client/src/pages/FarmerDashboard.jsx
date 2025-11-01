@@ -11,6 +11,7 @@ const FarmerDashboard = ({
   loanMatching,
   showNotification,
   refreshTrigger,
+  allAccounts,
 }) => {
   const [activeTab, setActiveTab] = useState("products");
 
@@ -60,6 +61,7 @@ const FarmerDashboard = ({
             userRegistry={userRegistry}
             showNotification={showNotification}
             refreshTrigger={refreshTrigger}
+            allAccounts={allAccounts}
           />
         )}
         {activeTab === "insurance" && (

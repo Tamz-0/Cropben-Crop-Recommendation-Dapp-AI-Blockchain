@@ -39,8 +39,7 @@ function App() {
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
 
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
-  const [selectedRoleForRegistration, setSelectedRoleForRegistration] =
-    useState(null);
+  const [selectedRoleForRegistration, setSelectedRoleForRegistration] = useState(null);
 
   useEffect(() => {
     if (window.ethereum) {
@@ -210,7 +209,6 @@ function App() {
         console.log(`Farmer details - Land: ${landSize}, Tools: ${toolsOwned}`);
         // Note: The `toolsOwned` is captured but not sent to the contract,
         // as the original contract function doesn't accept it.
-        // This would require a smart contract modification to store it on-chain.
         await userRegistry.methods
           .registerAsFarmer(registrationName, landSize)
           .send({ from: account });
@@ -346,6 +344,7 @@ function App() {
             roleToString={roleToString}
             refreshTrigger={refreshTrigger}
             triggerRefresh={triggerRefresh}
+            allAccounts={accounts}
           />
         )}
       </main>

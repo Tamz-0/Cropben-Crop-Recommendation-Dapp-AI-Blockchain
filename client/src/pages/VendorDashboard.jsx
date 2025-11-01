@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProductList from "../components/ProductList";
 
-const VendorDashboard = ({ productLedger, account, showNotification }) => {
-  const [confirmProductId, setConfirmProductId] = useState("");
+const VendorDashboard = ({
+  productLedger,
+  account,
+  showNotification,
+  allAccounts,
+}) => {
+  const [pendingReceipts, setPendingReceipts] = useState([]);
+  const [loadingReceipts, setLoadingReceipts] = useState(true);
   const [sellProductId, setSellProductId] = useState("");
   const [loadingAction, setLoadingAction] = useState(null);
   const [listKey, setListKey] = useState(Date.now());
@@ -12,21 +18,57 @@ const VendorDashboard = ({ productLedger, account, showNotification }) => {
   const [nextVendorAddress, setNextVendorAddress] = useState("");
   const [nextSalePrice, setNextSalePrice] = useState("");
 
-  const handleConfirmReceipt = async () => {
-    if (!confirmProductId) {
-      showNotification("Please enter a Product ID to confirm.", "error");
+  const fetchPendingReceipts = async () => {
+    if (!productLedger) return;
+    setLoadingReceipts(true);
+    try {
+      const productData = await productLedger.methods.getAllProducts().call();
+
+      const cores = productData[0];
+      const metadata = productData[1];
+
+      console.log("Fetched products:", cores, metadata);
+
+      const products = cores.map((core, index) => ({
+        ...core,
+        ...metadata[index],
+        id: Number(core.id),
+        stage: Number(core.stage),
+      }));
+
+      const pending = products.filter(
+        (p) =>
+          p.stage === 2 &&
+          p.designatedVendor.toLowerCase() === account.toLowerCase()
+      );
+
+      setPendingReceipts(pending);
+    } catch (err) {
+      console.error("Error fetching pending receipts:", err);
+      showNotification("Could not fetch products to be confirmed.", "error");
+    } finally {
+      setLoadingReceipts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingReceipts();
+  }, [productLedger, account, listKey]);
+
+  const handleConfirmReceipt = async (productId) => {
+    if (!productId) {
+      showNotification("Please select a product to confirm.", "error");
       return;
     }
-    setLoadingAction("confirm");
+    setLoadingAction(`confirm-${productId}`);
     try {
       await productLedger.methods
-        .confirmReceipt(confirmProductId)
+        .confirmReceipt(productId)
         .send({ from: account });
       showNotification(
-        `Receipt confirmed for Product #${confirmProductId}!`,
+        `Receipt confirmed for Product #${productId}!`,
         "success"
       );
-      setConfirmProductId("");
       setListKey(Date.now());
     } catch (err) {
       console.error("Error confirming receipt:", err);
@@ -117,26 +159,35 @@ const VendorDashboard = ({ productLedger, account, showNotification }) => {
             1. Confirm Product Receipt
           </h3>
           <p className="text-gray-600 mb-4">
-            Enter the ID of a product that has been sent to you to confirm its
-            receipt and take ownership.
+            Products currently in-transit to you are listed below.
           </p>
-          <div className="flex items-center space-x-4">
-            <input
-              value={confirmProductId}
-              onChange={(e) => setConfirmProductId(e.target.value)}
-              placeholder="Enter Product ID"
-              className="border p-2 rounded w-full"
-              type="number"
-            />
-            <button
-              onClick={handleConfirmReceipt}
-              className="px-4 py-2 rounded bg-blue-600 text-white flex-shrink-0"
-              disabled={loadingAction}
-            >
-              {loadingAction === "confirm"
-                ? "Processing..."
-                : "Confirm Receipt"}
-            </button>
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {loadingReceipts ? (
+              <p>Loading pending receipts...</p>
+            ) : pendingReceipts.length > 0 ? (
+              pendingReceipts.map((product) => (
+                <div
+                  key={product.id}
+                  className="p-3 border rounded-md flex justify-between items-center"
+                >
+                  <div>
+                    <span className="font-bold">ID: {String(product.id)}</span>
+                    <span className="ml-4 text-gray-700">{product.name}</span>
+                  </div>
+                  <button
+                    onClick={() => handleConfirmReceipt(product.id)}
+                    className="px-3 py-1 rounded bg-blue-600 text-white flex-shrink-0"
+                    disabled={loadingAction === `confirm-${product.id}`}
+                  >
+                    {loadingAction === `confirm-${product.id}`
+                      ? "..."
+                      : "Confirm"}
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">No products are pending receipt.</p>
+            )}
           </div>
         </div>
 
@@ -155,13 +206,29 @@ const VendorDashboard = ({ productLedger, account, showNotification }) => {
               className="border p-2 rounded w-full"
               type="number"
             />
-            <input
+            <select
               value={nextVendorAddress}
               onChange={(e) => setNextVendorAddress(e.target.value)}
-              placeholder="Next Vendor's Address (0x...)"
               className="border p-2 rounded w-full font-mono"
+            >
+              <option value="">Select Vendor Address</option>
+              {allAccounts
+                .filter((acc) => acc.toLowerCase() !== account.toLowerCase())
+                .map((acc) => (
+                  <option key={acc} value={acc}>
+                    {acc}
+                  </option>
+                ))}
+            </select>
+
+            <input
               type="text"
+              value={nextVendorAddress}
+              onChange={(e) => setNextVendorAddress(e.target.value)}
+              placeholder="Or enter vendor address manually"
+              className="border p-2 rounded w-full font-mono"
             />
+
             <input
               value={nextSalePrice}
               onChange={(e) => setNextSalePrice(e.target.value)}
