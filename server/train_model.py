@@ -3,7 +3,7 @@ from sklearn.ensemble import RandomForestClassifier
 import joblib
 import os
 
-df = pd.read_csv("D:/WEB/Blockchain/SupplyChain/New folder/server/data/crop_yield.csv")
+df = pd.read_csv("data/crop_yield.csv")
 
 # Define risk based on yield
 def risk_label(y):

@@ -5,3 +5,4 @@ model
 build 
 ai-server
 __pycache__
+.dockerignore

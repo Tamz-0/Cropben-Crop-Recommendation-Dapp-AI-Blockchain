@@ -1,0 +1,56 @@
+version: '3.8'
+
+# This named volume will store the contract ABIs (build/contracts)
+# and share them between the 'migrate' and 'client' services.
+volumes:
+  build_contracts:
+
+services:
+  # 1. Ganache Blockchain Service
+  blockchain:
+    build:
+      context: .
+      dockerfile: Dockerfile.ganache
+    environment:
+      - MNEMONIC=${MNEMONIC} # Load from .env file
+    ports:
+      - "7545:7545"
+
+  # 2. Contract Migration Service
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    depends_on:
+      - blockchain # Waits for blockchain to be ready
+    volumes:
+      # This service runs 'truffle migrate' and writes its
+      # output to the 'build_contracts' volume.
+      - build_contracts:/app/build/contracts
+    # This service will run, migrate the contracts, and then exit.
+
+  # 3. AI Backend Server
+  server:
+    build:
+      context: ./server
+      # Assumes your server Dockerfile is at server/Dockerfile
+    environment:
+      - WEATHER_API_KEY=${WEATHER_API_KEY} # Load from .env file
+    ports:
+      - "5000:5000"
+    depends_on:
+      - blockchain
+
+  # 4. React Frontend Client
+  client:
+    build:
+      context: ./client
+      # Assumes your client Dockerfile is at client/Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mounts the contract ABIs from the volume (read-only)
+      - build_contracts:/app/build/contracts:ro
+    depends_on:
+      - migrate  # Ensures client doesn't start until contracts are deployed
+      - server   # Ensures client doesn't start until AI server is ready

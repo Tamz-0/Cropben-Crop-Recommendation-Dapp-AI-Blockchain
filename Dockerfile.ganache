@@ -1,0 +1,10 @@
+# Dockerfile for Ganache
+FROM node:20-alpine
+
+RUN npm install -g ganache
+
+# Expose the Ganache port
+EXPOSE 7545
+
+# Start Ganache. $MNEMONIC is passed from docker-compose.
+CMD ["ganache", "--host", "0.0.0.0", "--port", "7545", "--network-id", "5777", "--mnemonic", "$MNEMONIC"]

@@ -12,8 +12,8 @@ WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 if not WEATHER_API_KEY:
     raise ValueError("WEATHER_API_KEY not found in .env file.")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "risk_model.pkl")
-DISTRICT_CSV = os.path.join(os.path.dirname(__file__), "data", "district_mapping.csv")
+MODEL_PATH = "model/risk_model.pkl"
+DISTRICT_CSV = "data/district_mapping.csv"
 
 
 district_df = pd.read_csv(DISTRICT_CSV)
