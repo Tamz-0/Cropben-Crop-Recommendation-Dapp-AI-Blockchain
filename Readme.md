@@ -1,6 +1,6 @@
-# AI-Agrochain: AI-Integrated Blockchain for Agricultural Transparency
+# AgriChain: AI-Integrated Blockchain for Agricultural Transparency
 
-**AI-Agrochain** is a full-stack, decentralized application designed to revolutionize the agricultural supply chain. By integrating a React frontend, a Python AI-backend, and Solidity smart contracts, this platform provides end-to-end product traceability, AI-driven crop insurance, and intelligent loan matching for farmers.
+**AgriChain** is a full-stack, decentralized application designed to revolutionize the agricultural supply chain. By integrating a React frontend, a Python AI-backend, and Solidity smart contracts, this platform provides end-to-end product traceability, AI-driven crop insurance, and intelligent loan matching for farmers.
 
 The system creates an immutable, transparent, and intelligent ecosystem connecting Farmers, Vendors, Consumers, Banks, Insurance Providers, and Verifiers.
 
