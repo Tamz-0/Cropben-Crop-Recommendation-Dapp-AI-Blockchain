@@ -98,7 +98,7 @@ const BankDashboard = ({ loanMatching, account, showNotification }) => {
                       <span className="font-mono text-xs">{app.farmer}</span>
                     </p>
                     <p>
-                      <strong>Amount:</strong> {String(app.amount)} INR
+                      <strong>Amount:</strong> {String(app.amount)} Wei
                     </p>
                   </div>
                   <div className="space-x-2">
@@ -144,7 +144,7 @@ const BankDashboard = ({ loanMatching, account, showNotification }) => {
                       <span className="font-mono text-xs">{app.farmer}</span>
                     </p>
                     <p>
-                      <strong>Amount:</strong> {String(app.amount)} INR
+                      <strong>Amount:</strong> {String(app.amount)} Wei
                     </p>
                     <p>
                       <strong>Status:</strong>{" "}

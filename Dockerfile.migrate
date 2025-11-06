@@ -1,14 +1,13 @@
 # Dockerfile for Truffle migrations
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 RUN npm install -g truffle
 
-# Copy contract configuration and source
 COPY truffle-config.js .
 COPY contracts ./contracts
 COPY migrations ./migrations
 
-# This command will run when the service starts
+# network name 'docker' should be defined in truffle-config.js
 CMD ["truffle", "migrate", "--network", "docker", "--reset"]

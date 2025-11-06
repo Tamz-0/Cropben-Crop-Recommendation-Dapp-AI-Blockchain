@@ -17,7 +17,7 @@ DISTRICT_CSV = "data/district_mapping.csv"
 
 
 district_df = pd.read_csv(DISTRICT_CSV)
-district_df["district"] = district_df["district"].str.strip().str.lower()
+district_df["district"] = district_df["District"].str.strip().str.lower()
 
 model = joblib.load(MODEL_PATH)
 

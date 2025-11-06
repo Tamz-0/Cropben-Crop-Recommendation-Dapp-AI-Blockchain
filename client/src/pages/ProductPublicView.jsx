@@ -5,7 +5,7 @@ import ProductLedger from "../../../build/contracts/ProductLedger.json";
 import UserRegistry from "../../../build/contracts/UserRegistry.json";
 import { PRODUCT_LEDGER_ADDRESS, USER_REGISTRY_ADDRESS } from "../config.js";
 
-const PUBLIC_RPC_URL = "http://127.0.0.1:7545"; // Gansache local blockchain URL
+const PUBLIC_RPC_URL = "http://127.0.0.1:7545";
 
 const stageToString = (stage) => {
   const stages = ["Sown", "Harvested", "In Transit", "At Vendor", "Sold"];

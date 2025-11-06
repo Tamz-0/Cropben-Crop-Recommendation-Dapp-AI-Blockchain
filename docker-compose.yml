@@ -1,12 +1,14 @@
 version: '3.8'
 
-# This named volume will store the contract ABIs (build/contracts)
-# and share them between the 'migrate' and 'client' services.
+# volume will store the contract ABIs (build/contracts) and share them between the 'migrate' and 'client' services.
 volumes:
   build_contracts:
 
+  # volume will store the Ganache database.
+  ganache_db_data:
+
 services:
-  # 1. Ganache Blockchain Service
+  # Ganache Blockchain Service
   blockchain:
     build:
       context: .
@@ -15,8 +17,13 @@ services:
       - MNEMONIC=${MNEMONIC} # Load from .env file
     ports:
       - "7545:7545"
+    # Ganache save its data inside the container
+    command: sh -c "ganache --host 0.0.0.0 --port 7545 --network-id 5777 --mnemonic \"$MNEMONIC\" --database.dbPath /app/db"    
+    # Map internal path to persistent volume
+    volumes:
+      - ganache_db_data:/app/db
 
-  # 2. Contract Migration Service
+  # Contract Migration Service
   migrate:
     build:
       context: .
@@ -24,33 +31,29 @@ services:
     depends_on:
       - blockchain # Waits for blockchain to be ready
     volumes:
-      # This service runs 'truffle migrate' and writes its
-      # output to the 'build_contracts' volume.
-      - build_contracts:/app/build/contracts
-    # This service will run, migrate the contracts, and then exit.
+      # service runs 'truffle migrate' and writes its output to the 'build_contracts' volume.
+      - build_contracts:/build/contracts
 
-  # 3. AI Backend Server
+  # AI Backend Server
   server:
     build:
       context: ./server
-      # Assumes your server Dockerfile is at server/Dockerfile
     environment:
-      - WEATHER_API_KEY=${WEATHER_API_KEY} # Load from .env file
+      - WEATHER_API_KEY=${WEATHER_API_KEY} 
     ports:
       - "5000:5000"
     depends_on:
       - blockchain
 
-  # 4. React Frontend Client
+  # React Frontend Client
   client:
     build:
       context: ./client
-      # Assumes your client Dockerfile is at client/Dockerfile
     ports:
       - "5173:5173"
     volumes:
       # Mounts the contract ABIs from the volume (read-only)
-      - build_contracts:/app/build/contracts:ro
+      - build_contracts:/build/contracts:ro
     depends_on:
-      - migrate  # Ensures client doesn't start until contracts are deployed
-      - server   # Ensures client doesn't start until AI server is ready
+      - migrate  
+      - server   

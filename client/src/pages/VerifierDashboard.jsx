@@ -125,7 +125,7 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
-            Verifier Dashboard
+            Verifier
           </h1>
           <p className="text-gray-600 mt-1">
             Review and verify products on the ledger.
@@ -210,8 +210,8 @@ const VerifierDashboard = ({ productLedger, account, showNotification }) => {
                             {verifyingId === p.id ? "Submitting..." : "Verify"}
                           </button>
                         ) : (
-                          <span className="text-gray-400 text-sm italic">
-                            (Wrong Stage)
+                          <span className="text-gray-600 font-semibold">
+                            Not Verified
                           </span>
                         )}
                       </td>

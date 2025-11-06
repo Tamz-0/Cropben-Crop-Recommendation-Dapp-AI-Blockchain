@@ -1,3 +1,5 @@
+import { useState } from "react"; 
+
 const AdminPanel = ({
   web3,
   userRegistry,
@@ -5,27 +7,31 @@ const AdminPanel = ({
   showNotification,
   triggerRefresh,
 }) => {
-  const addAdminRole = async (role) => {
-    if (!userRegistry || !account) {
+  const [role, setRole] = useState("Bank"); 
+  const [address, setAddress] = useState("");
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); 
+
+    if (!userRegistry || !account || !web3) {
       showNotification("Admin component not ready.", "error");
       return;
     }
-
-    const address = prompt(`Enter the wallet address for the new ${role}:`);
-    // Use web3.utils to check for a valid address
-    if (!web3 || !web3.utils.isAddress(address)) {
+    if (!web3.utils.isAddress(address)) {
       showNotification("Invalid Ethereum address provided.", "error");
       return;
     }
-
-    const name = prompt(`Enter the name for the new ${role}:`);
     if (!name || name.trim() === "") {
       showNotification("A name is required.", "error");
       return;
     }
 
+    setIsLoading(true);
+    showNotification(`Adding ${name} as a ${role}...`, "info");
+
     try {
-      showNotification(`Adding ${name} as a ${role}...`, "info");
       if (role === "Bank") {
         await userRegistry.methods
           .addBank(address, name)
@@ -39,41 +45,95 @@ const AdminPanel = ({
           .addVerifier(address, name)
           .send({ from: account });
       }
+      
       showNotification(`${role} added successfully!`, "success");
-      triggerRefresh(); // Trigger a refresh in parent component
+      triggerRefresh(); 
+      
+      setAddress("");
+      setName("");
+
     } catch (err) {
       console.error(`Failed to add ${role}:`, err);
       showNotification(`Error: Could not add ${role}.`, "error");
+    } finally {
+      setIsLoading(false); 
     }
   };
 
   return (
-    <div className="mt-8 p-6 bg-yellow-100 border-2 border-yellow-400 rounded shadow text-center">
-      <h2 className="text-2xl font-semibold text-yellow-800">Admin Panel</h2>
-      <p className="mt-2 text-gray-700">
-        You are the contract owner. Use these functions to add official
-        entities.
+    <div className="mt-8 p-6 bg-yellow-100 border-2 border-yellow-400 rounded-lg shadow-md">
+      <h2 className="text-2xl font-semibold text-yellow-800 text-center">
+        Admin Panel
+      </h2>
+      <p className="mt-2 text-gray-700 text-center">
+        You are the contract owner. Use this form to add official entities.
       </p>
-      <div className="mt-4 flex justify-center flex-wrap gap-4">
-        <button
-          onClick={() => addAdminRole("Bank")}
-          className="px-4 py-2 rounded bg-red-600 text-white"
-        >
-          Add Bank
-        </button>
-        <button
-          onClick={() => addAdminRole("Insurance")}
-          className="px-4 py-2 rounded bg-indigo-600 text-white"
-        >
-          Add Insurance Co.
-        </button>
-        <button
-          onClick={() => addAdminRole("Verifier")}
-          className="px-4 py-2 rounded bg-gray-700 text-white"
-        >
-          Add Verifier
-        </button>
-      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <div>
+          <label
+            htmlFor="role"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Select Role to Add
+          </label>
+          <select
+            id="role"
+            name="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="Bank">Bank</option>
+            <option value="Insurance">Insurance Co.</option>
+            <option value="Verifier">Verifier</option>
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Wallet Address
+          </label>
+          <input
+            type="text"
+            id="address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="0x..."
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Entity Name
+          </label>
+          <input
+            type="text"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., 'National Bank'"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          />
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isLoading ? `Adding ${role}...` : `Add New ${role}`}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

@@ -262,7 +262,7 @@ const FarmerProducts = ({
         farmingMethod:
           Number(selectedProductForQuote.practice) === 1
             ? "Organic"
-            : "Conventional ",
+            : "Conventional",
         district: selectedProductForQuote.location,
         sowing_month: sowingMonth,
         irrigatonUsed: irrigationUsed, 
