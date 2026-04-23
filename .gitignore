@@ -1,0 +1,7 @@
+client/node_modules
+data
+model
+.env
+build 
+__pycache__
+.dockerignore

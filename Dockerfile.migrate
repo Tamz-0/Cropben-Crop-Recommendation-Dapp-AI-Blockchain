@@ -1,0 +1,13 @@
+# Dockerfile for Truffle migrations
+FROM node:20-slim
+
+WORKDIR /app
+
+RUN npm install -g truffle
+
+COPY truffle-config.js .
+COPY contracts ./contracts
+COPY migrations ./migrations
+
+# network name 'docker' should be defined in truffle-config.js
+CMD ["truffle", "migrate", "--network", "docker", "--reset"]
